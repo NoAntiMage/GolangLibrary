@@ -29,7 +29,7 @@ func useChannel() {
 }
 
 func useWaitGroup() {
-	wg := sync.WaitGroup()
+	var wg sync.WaitGroup
 	wg.Add(100)
 	for i := 0; i < 100; i++ {
 		go func(i int) {
@@ -41,12 +41,12 @@ func useWaitGroup() {
 }
 
 func passArg(i int, wg *sync.WaitGroup) {
-	fmt.Println()
+	fmt.Println(i)
 	wg.Done()
 }
 
 func main() {
-	wg := sync.WaitGroup()
+	var wg sync.WaitGroup
 	wg.Add(100)
 	for i := 0; i < 100; i++ {
 		go passArg(i, &wg)
