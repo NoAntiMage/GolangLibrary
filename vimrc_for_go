@@ -1,0 +1,60 @@
+set nocompatible              " 去除VI一致性,必须
+filetype off                  " 必须
+set rtp+=~/.vim/bundle/Vundle.vim
+call vundle#begin()
+Plugin 'VundleVim/Vundle.vim'
+Plugin 'fatih/vim-go'
+Plugin 'scrooloose/nerdtree'
+Plugin 'majutsushi/tagbar'
+Plugin 'neoclide/coc.nvim' , {'branch': 'release'}
+Plugin 'bling/vim-airline'
+call vundle#end()            " required
+filetype plugin indent on    " required
+
+set encoding=utf-8
+set number
+set cursorline
+set mouse=a
+set selection=exclusive
+set selectmode=mouse,key
+set autoindent
+set tabstop=4
+set guifont=Monaco:h12
+
+let g:coc_disable_startup_warning = 1
+
+" vim-go
+let g:go_fmt_command = 'goimports'
+let g:go_autodetect_gopath = 1
+" let g:go_bin_path = '$GOBIN'
+
+let g:go_highlight_types = 1
+let g:go_highlight_fields = 1
+let g:go_highlight_functions = 1
+let g:go_highlight_function_calls = 1
+let g:go_highlight_extra_types = 1
+let g:go_highlight_generate_tags = 1
+
+" Open :GoDeclsDir with ctrl-g
+nmap <C-g> :GoDeclsDir<cr>
+imap <C-g> <esc>:<C-u>GoDeclsDir<cr>
+
+augroup go
+  autocmd!
+  autocmd BufNewFile,BufRead *.go setlocal noexpandtab tabstop=4 shiftwidth=4
+augroup END
+
+" tagbar
+let g:tagbar_ctags_bin='/usr/local/bin/ctags'  
+let g:tagbar_width=30  
+autocmd BufReadPost *.cpp,*.c,*.h,*.hpp,*.cc,*.cxx call tagbar#autoopen()  
+let g:jedi#auto_initialization = 1  
+map <F8> :TagbarToggle<CR>
+
+" 括号补全
+inoremap ( ()<ESC>i
+inoremap [ []<ESC>i
+inoremap { {}<ESC>i
+inoremap < <><ESC>i
+inoremap " ""<ESC>i
+inoremap ' ''<ESC>i
