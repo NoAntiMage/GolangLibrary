@@ -13,7 +13,7 @@ var hello string
 
 func init() {
 	hello = "world"
-	InitDB, err = sql.Open("mysql", "root:123456@tcp(192.168.133.48:3308)/employees_practice")
+	InitDB, err = sql.Open("mysql", "root:123456@tcp(192.168.133.48:3307)/employees_practice")
 	if err != nil {
 		fmt.Println(err)
 	}

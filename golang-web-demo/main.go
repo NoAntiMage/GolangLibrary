@@ -6,47 +6,30 @@ import (
 	"time"
 	"tmpgo/db"
 	"tmpgo/models"
+	"tmpgo/router"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gomodule/redigo/redis"
 )
 
 var d = db.InitDB
-var c = db.RedisConn
+
+//var c = db.RedisConn
+var r = router.Router
 
 func main() {
-	//GetVersion()
-	//getDatabases()
+	r.Run()
 	//	getEmpName(10001)
 	//	getEmpProfile(10001)
 	//	a := getNow()
 	//	fmt.Println(a)
 	//	getEmpProfile(10001)
-	updateAllLeaveDate()
+	//updateAllLeaveDate()
 	//	redisPing()
 	//redisGet("page_offset")
 	//redisIncr("page_view")
 	//redisReset("page_view")
-}
 
-func getVersion() {
-	var version string
-	sql := "SELECT VERSION()"
-	d.QueryRow(sql).Scan(&version)
-	fmt.Println(version)
-}
-
-func getNow() (result time.Time) {
-	//var nowtime string
-	const shortForm = "2006-01-02 15:04:05"
-	var nowtime string
-	sql := "SELECT NOW()"
-	row := d.QueryRow(sql)
-	row.Scan(&nowtime)
-	fmt.Println(nowtime)
-	result, _ = time.Parse(shortForm, nowtime)
-	fmt.Println(result.Format("2006-01-02"))
-	return
 }
 
 func parseDateTime(thetime string) (result time.Time) {
@@ -59,32 +42,6 @@ func parseDate(thetime string) (result time.Time) {
 	const dateForm = "2006-01-02"
 	result, _ = time.Parse(dateForm, thetime)
 	return
-}
-
-func getDatabases() {
-	//	var databases string[]
-	rows, err := d.Query("SHOW DATABASES")
-	if err != nil {
-		panic(err)
-	}
-	for rows.Next() {
-		var database string
-		rows.Scan(&database)
-		fmt.Println(database)
-	}
-}
-
-func getTables() {
-	rows, err := d.Query("SHOW TABLES")
-	if err != nil {
-		panic(err)
-	}
-
-	for rows.Next() {
-		var table string
-		rows.Scan(&table)
-		fmt.Println(table)
-	}
 }
 
 func getEmpName(id int) {
