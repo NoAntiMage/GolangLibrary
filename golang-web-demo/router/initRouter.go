@@ -30,4 +30,12 @@ func init() {
 		dbRouter.GET("/dbs", views.GetDatabases)
 		dbRouter.GET("/tables", views.GetTables)
 	}
+
+	queryRouter := Router.Group("/api")
+	{
+		queryRouter.GET("/user/count", views.GetEmployeeSum)
+		queryRouter.GET("/user/name", views.GetEmployeeName)
+		queryRouter.GET("/user/detail", views.GetEmployeeDetail)
+		queryRouter.GET("/users", views.GetRangeEmps)
+	}
 }
