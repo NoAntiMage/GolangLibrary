@@ -1,7 +1,7 @@
 package main
 
 import (
-	"tmpgo/router"
+	"tmpgo/models"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -10,15 +10,10 @@ import (
 
 //var c = db.RedisConn
 
-var r = router.Router
+//var r = router.Router
 
 func main() {
-	r.Run()
-	//var e models.Employee
-	//l := e.GetEmpToDates(10009)
-	//fmt.Println(l)
-	//e.UpdateEmpLeaveDate()
-	//l := e.QueryRangeEmps(0, 10)
-	//fmt.Println(l)
-	//e.UpdateAllLeaveDate()
+	//	r.Run()
+	var e models.Employee
+	e.UpdateAllEmpLeaveDate()
 }

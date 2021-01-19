@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+	"tmpgo/db"
 	"tmpgo/utils"
 )
 
@@ -86,6 +87,16 @@ func (this Employee) UpdateEmpLeaveDate(id int, leaveDate string) {
 	}
 }
 
+func (this Employee) UpdateRangeEmpsLeaveDates(empList []int) {
+	fmt.Println(empList)
+	for _, id := range empList {
+		leaveDate := this.GetEmpLeaveDate(id)
+		//fmt.Println(id)
+		//fmt.Println(leaveDate)
+		this.UpdateEmpLeaveDate(id, leaveDate)
+	}
+}
+
 func (this Employee) QueryRangeEmps(offset int, pageSize int) (empNoList []int) {
 	sql := "SELECT emp_no FROM employees LIMIT ?,?"
 	stmt, err := d.Prepare(sql)
@@ -114,5 +125,24 @@ func (this Employee) GetEmpLeaveDate(id int) (maxDate string) {
 }
 
 func (this Employee) UpdateAllEmpLeaveDate() {
-	//TODO
+	num := this.CountEmp()
+	//fmt.Println(num)
+	redisKey := "page_offset"
+	pageOffset, err := strconv.Atoi(db.RedisGet(redisKey))
+	if err != nil {
+		panic(err)
+	}
+	pageSize := 500
+	pageLeft := (num / pageSize) - pageOffset + 1
+
+	fmt.Println("start at page: " + strconv.Itoa(pageOffset))
+
+	for i := 0; i < pageLeft; i++ {
+		targetEmpList := this.QueryRangeEmps(pageOffset*pageSize, pageSize)
+		this.UpdateRangeEmpsLeaveDates(targetEmpList)
+		pageOffset += 1
+		db.RedisIncr(redisKey)
+	}
+
+	db.RedisReset(redisKey)
 }
