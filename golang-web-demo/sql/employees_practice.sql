@@ -69,7 +69,7 @@ CREATE TABLE `employees` (
   `last_name` varchar(16) NOT NULL,
   `gender` enum('M','F') NOT NULL,
   `hire_date` date NOT NULL,
-  `leave_date` date DEFAULT NULL,
+  `leave_date` date NOT NULL,
   PRIMARY KEY (`emp_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
