@@ -14,7 +14,7 @@ type Employee struct {
 	LastName  string
 	Gender    string
 	HireDate  time.Time
-	//	LeaveDate time.Time
+	LeaveDate time.Time
 }
 
 func (this Employee) GetEmpName(id int) (name string) {
@@ -107,6 +107,12 @@ func (this Employee) QueryRangeEmps(offset int, pageSize int) (empNoList []int) 
 	return
 }
 
-func (this Employee) UpdateAllLeaveDate() {
+func (this Employee) GetEmpLeaveDate(id int) (maxDate string) {
+	l := this.GetEmpToDates(id)
+	maxDate = utils.MaxDateInList(l)
+	return
+}
+
+func (this Employee) UpdateAllEmpLeaveDate() {
 	//TODO
 }

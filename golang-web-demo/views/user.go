@@ -47,7 +47,22 @@ func GetRangeEmps(c *gin.Context) {
 	var e models.Employee
 	l := e.QueryRangeEmps(Offset, PageSize)
 	c.JSON(http.StatusOK, gin.H{
-		"message": l,
+		"emp_list": l,
 	})
-	//TODO
 }
+
+//func UpdateToDate(c *gin.Context) {
+//	jsonf := make(map[string]interface{})
+//	c.BindJSON(&jsonf)
+//	id, ok := jsonf["id"]
+//	if ok {
+//		var e models.Employee
+//		leaveDate := e.GetEmpLeaveDate(id)
+//		e.UpdateEmpLeaveDate(id, leaveDate)
+//	} else {
+//		fmt.Println("key <id> not exist.")
+//	}
+//	c.JSON(http.StatusOK, gin.H{
+//		"message": "ok",
+//	})
+//}
