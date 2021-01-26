@@ -37,6 +37,6 @@ func init() {
 		queryRouter.GET("/user/name", views.GetEmployeeName)
 		queryRouter.GET("/user/detail", views.GetEmployeeDetail)
 		queryRouter.GET("/users", views.GetRangeEmps)
-		queryRouter.POST("/user/update/todate", views.UpdateToDate)
+		//	queryRouter.POST("/user/update/todate", views.UpdateToDate)
 	}
 }
