@@ -18,6 +18,7 @@ func init() {
 	)
 	dbType = setting.DatabaseSetting.Type
 	dbUser = setting.DatabaseSetting.User
+	dbPassword = setting.DatabaseSetting.Password
 	dbHost = setting.DatabaseSetting.Host
 	dbPort = setting.DatabaseSetting.Port
 	dbName = setting.DatabaseSetting.DbName

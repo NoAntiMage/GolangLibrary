@@ -18,8 +18,22 @@ func main() {
 }
 
 //func main() {
-//	d := setting.DatabaseSetting
-//	fmt.Println(d)
-//	r := setting.RedisSetting
-//	fmt.Println(r)
+//	var (
+//		dbType, dbUser, dbPassword, dbHost, dbPort, dbName string
+//	)
+//	dbType = setting.DatabaseSetting.Type
+//	dbUser = setting.DatabaseSetting.User
+//	dbPassword = setting.DatabaseSetting.Password
+//	dbHost = setting.DatabaseSetting.Host
+//	dbPort = setting.DatabaseSetting.Port
+//	dbName = setting.DatabaseSetting.DbName
+//
+//	fmt.Println(dbType)
+//	//	InitDB, err = sql.Open("mysql", "root:123456@tcp(192.168.133.48:3307)/employees_practice")
+//	fmt.Printf("%s:%s@tcp(%s:%s)/%s",
+//		dbUser,
+//		dbPassword,
+//		dbHost,
+//		dbPort,
+//		dbName)
 //}
