@@ -16,3 +16,10 @@ var r = router.Router
 func main() {
 	r.Run()
 }
+
+//func main() {
+//	d := setting.DatabaseSetting
+//	fmt.Println(d)
+//	r := setting.RedisSetting
+//	fmt.Println(r)
+//}

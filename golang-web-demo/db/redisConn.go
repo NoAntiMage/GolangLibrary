@@ -6,6 +6,7 @@ import (
 
 	"fmt"
 	"time"
+	"tmpgo/utils/setting"
 
 	"github.com/gomodule/redigo/redis"
 )
@@ -60,9 +61,18 @@ func RedisReset(value string) {
 }
 
 func Setup() error {
+	var (
+		redisHost, redisPort string
+	)
+	redisHost = setting.RedisSetting.Host
+	redisPort = setting.RedisSetting.Port
 	RedisConn = &redis.Pool{
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", "192.168.133.48:10109")
+			//c, err := redis.Dial("tcp", "192.168.133.48:10109")
+			c, err := redis.Dial("tcp", fmt.Sprintf("%s:%s",
+				redisHost,
+				redisPort,
+			))
 			if err != nil {
 				return nil, err
 			}
