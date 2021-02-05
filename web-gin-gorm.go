@@ -24,7 +24,7 @@ var db *gorm.DB
 
 func init() {
 	var err error
-	db, err = gorm.Open("mysql", "root:password@tcp(127.0.0.1:3306)demo")
+	db, err = gorm.Open("mysql", "root:password@tcp(127.0.0.1:3306)/demo")
 	if err != nil {
 		panic("failed")
 	}
