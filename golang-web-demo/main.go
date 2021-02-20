@@ -2,7 +2,7 @@ package main
 
 import (
 	"tmpgo/db"
-	"tmpgo/router"
+	"tmpgo/models"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -11,11 +11,11 @@ var d = db.InitDB
 
 var c = db.RedisConn
 
-var r = router.Router
+//var r = router.Router
 
-func main() {
-	r.Run()
-}
+//func main() {
+//	r.Run()
+//}
 
 //func main() {
 //	var (
@@ -37,3 +37,7 @@ func main() {
 //		dbPort,
 //		dbName)
 //}
+
+func main() {
+	models.Employee.UpdateAllEmpLeaveDate()
+}

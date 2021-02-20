@@ -93,6 +93,9 @@ func (this Employee) UpdateRangeEmpsLeaveDates(empList []int) {
 		leaveDate := this.GetEmpLeaveDate(id)
 		//fmt.Println(id)
 		//fmt.Println(leaveDate)
+		if leaveDate == "9999-12-31" {
+			break
+		}
 		this.UpdateEmpLeaveDate(id, leaveDate)
 	}
 }
