@@ -2,6 +2,7 @@ FROM golang:1.15-alpine3.12 AS builder
 ENV GO111MODULE=on \
     CGO_ENABLED=0 \
     GOPROXY=https://goproxy.io/
+# GOPROXY=https://mirrors.aliyun.com/goproxy/
 WORKDIR /build
 COPY go.mod .
 COPY go.sum .
