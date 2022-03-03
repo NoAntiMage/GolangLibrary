@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -12,7 +13,8 @@ type Table string
 
 type Chain string
 
-type Policy string
+//iptables-extensions manual page
+type Target string
 
 type Action string
 
@@ -20,16 +22,26 @@ type Action string
 type IPTable struct{}
 
 type TableInfo struct {
-	Name   Table
-	Chains []Chain
+	Name    Table
+	Chains  []Chain
+	Targets []Target
 }
 
 // content of rule for iptables command
 type RuleInfo struct {
 	Table  *TableInfo
-	chain  Chain
+	Chain  Chain
 	Action Action
 	Args   []string
+}
+
+type RuleError struct {
+	Cmd    string
+	Output []byte
+}
+
+func (e RuleError) Error() string {
+	return fmt.Sprintf("Error iptables cmd: %s \noutput: %s", e.Cmd, string(e.Output))
 }
 
 const (
@@ -43,8 +55,11 @@ const (
 	PreRouting  Chain = "PREROUTING"
 	PostRouting Chain = "POSTROUTING"
 
-	Accept Policy = "ACCEPT"
-	Drop   Policy = "DROP"
+	Accept     Target = "ACCEPT"
+	Drop       Target = "DROP"
+	DNat       Target = "DNAT"
+	SNat       Target = "SNAT"
+	Masquerade Target = "MASQUERADE"
 
 	Append      Action = "-A"
 	Delete      Action = "-D"
@@ -53,16 +68,30 @@ const (
 	NewChain    Action = "-N"
 	DeleteChain Action = "-X"
 	PolicySet   Action = "-P"
+	Save        Action = "-S" // -S --list-rules, printed like iptables-save
 )
 
 var (
-	NatTable            TableInfo = TableInfo{Name: Nat, Chains: []Chain{Output, PreRouting, PreRouting}}
-	FilterTable         TableInfo = TableInfo{Name: Filter, Chains: []Chain{Forward, Input, Output}}
-	MangleTable         TableInfo = TableInfo{Name: Mangle, Chains: []Chain{Forward, Input, Output, PostRouting, PreRouting}}
-	IptablesPath        string
-	supportXlock        = false
-	ErrIptablesNotFound = errors.New("command Iptables not found")
-	initOnce            sync.Once
+	NatTable TableInfo = TableInfo{
+		Name:    Nat,
+		Chains:  []Chain{Output, PreRouting, PreRouting},
+		Targets: []Target{DNat, SNat, Masquerade},
+	}
+	FilterTable TableInfo = TableInfo{
+		Name:    Filter,
+		Chains:  []Chain{Forward, Input, Output},
+		Targets: []Target{Accept, Drop},
+	}
+	MangleTable TableInfo = TableInfo{
+		Name:   Mangle,
+		Chains: []Chain{Forward, Input, Output, PostRouting, PreRouting},
+	}
+	IptablesPath             string
+	supportXlock             = false
+	ErrIptablesNotFound      = errors.New("command Iptables not found")
+	ErrIptablesNotMatch      = errors.New("No chain/target/match by that name")
+	ErrRuleInfoChainNotFound = errors.New("Chain is required in the rule")
+	initOnce                 sync.Once
 )
 
 func init() {
@@ -108,41 +137,125 @@ func parseVersionNumber(input string) (major, minor, micro int) {
 	return
 }
 
-//--- Command ---
-//execute iptables comamnd in raw args
-func (ipt IPTable) raw(args ...string) {
-	out, err := exec.Command(IptablesPath, args...).CombinedOutput()
-	if err != nil {
-		fmt.Println("in ipt.raw")
-		fmt.Println(err)
+//--- RuleInfo ---
+func (ri *RuleInfo) DefaultTable() {
+	if ri.Table == nil {
+		ri.Table = &FilterTable
 	}
-	fmt.Println(string(out))
 }
 
-// Table is required in every command
-// TODO switch args
-func (ipt IPTable) Raw(ruleInfo RuleInfo) {
-	table := ruleInfo.Table.Name
-	if table == "" {
-		table = Filter
+//--- Command ---
+//execute iptables comamnd in raw args
+func (ipt IPTable) raw(args ...string) (out []byte, err error) {
+	out, err = exec.Command(IptablesPath, args...).CombinedOutput()
+	if err != nil {
+		fmt.Println(err)
 	}
+	return
+}
 
+//TODO current lock
+// Table, Chain and Action are required in every command
+func (ipt IPTable) Raw(ruleInfo *RuleInfo) ([]byte, error) {
+	ruleInfo.DefaultTable()
 	args := ruleInfo.Args
-	args = append([]string{"-t", string(table)}, args...)
-	ipt.raw(args...)
+	args = append([]string{"-t", string(ruleInfo.Table.Name), string(ruleInfo.Action), string(ruleInfo.Chain)}, args...)
+	return ipt.raw(args...)
 }
 
 //--- CRUD ---
 // 1. filtering
 // 2. nat
 
-func (ipt IPTable) IptablesSave(TableInfo *TableInfo) {
-	r := &RuleInfo{
-		Table: TableInfo,
-		Args:  []string{"-S"},
+func chainExistInTable(tableInfo *TableInfo, chain Chain) bool {
+	for _, v := range tableInfo.Chains {
+		if chain == v {
+			return true
+		}
 	}
-	ipt.Raw(*r)
+	return false
 }
+
+func targetExistInTable(tableInfo *TableInfo, target Target) bool {
+	for _, v := range tableInfo.Targets {
+		if target == v {
+			return true
+		}
+	}
+	return false
+}
+
+// iptables [-t table] -S [chain [rulenum]]
+func (ipt IPTable) IptablesSave(tableInfo *TableInfo, chain Chain) (out []byte, err error) {
+	if chain != "" {
+		existFlag := chainExistInTable(tableInfo, chain)
+		if existFlag != true {
+			return nil, ErrIptablesNotMatch
+		}
+	}
+	r := &RuleInfo{
+		Table:  tableInfo,
+		Chain:  chain,
+		Action: Save,
+	}
+	r.DefaultTable()
+	return ipt.Raw(r)
+}
+
+//Q: support -C opt or not?
+func (ipt IPTable) RuleExists(ruleInfo *RuleInfo) (bool, error) {
+	//table and chain are required in ruleInfo
+	if ruleInfo.Chain == "" {
+		return false, ErrRuleInfoChainNotFound
+	}
+	ruleInfo.DefaultTable()
+
+	ruleString := fmt.Sprintf("%s %s\n", ruleInfo.Chain, strings.Join(ruleInfo.Args, " "))
+	existingRules, _ := ipt.IptablesSave(ruleInfo.Table, ruleInfo.Chain)
+
+	return strings.Contains(string(existingRules), ruleString), nil
+}
+
+func (ipt IPTable) ProgramRule(ruleInfo RuleInfo) {
+
+}
+
+// default in filter table
+//iptables [-t table] -P chain target
+func (ipt IPTable) policySet(chain Chain, target Target) error {
+	legalFlag := chainExistInTable(&FilterTable, chain) && targetExistInTable(&FilterTable, target)
+	if legalFlag != true {
+		return ErrIptablesNotMatch
+	}
+
+	r := &RuleInfo{
+		Chain:  chain,
+		Action: PolicySet,
+		Args:   []string{string(target)},
+	}
+	out, err := ipt.Raw(r)
+	if err != nil {
+		fmt.Println(err)
+		return RuleError{
+			Output: out,
+		}
+
+	}
+	return nil
+}
+
+func (ipt IPTable) ForwardPolicySet(target Target) error {
+	return ipt.policySet(Forward, target)
+}
+
+func (ipt IPTable) Accept() {
+}
+
+func (ipt IPTable) Drop()    {}
+func (ipt IPTable) Forward() {}
+
+func (ipt IPTable) PreRouting()  {}
+func (ipt IPTable) PostRouting() {}
 
 //--- Application ---
 //TODO Packet filtering
