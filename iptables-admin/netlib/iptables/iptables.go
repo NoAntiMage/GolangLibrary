@@ -3,8 +3,10 @@ package iptables
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -91,6 +93,7 @@ var (
 	ErrIptablesNotFound      = errors.New("command Iptables not found")
 	ErrIptablesNotMatch      = errors.New("No chain/target/match by that name")
 	ErrRuleInfoChainNotFound = errors.New("Chain is required in the rule")
+	ErrRuleInfoChainExist    = errors.New("rule to append has exist")
 	initOnce                 sync.Once
 )
 
@@ -157,10 +160,30 @@ func (ipt IPTable) raw(args ...string) (out []byte, err error) {
 //TODO current lock
 // Table, Chain and Action are required in every command
 func (ipt IPTable) Raw(ruleInfo *RuleInfo) ([]byte, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println(r)
+		}
+	}()
 	ruleInfo.DefaultTable()
 	args := ruleInfo.Args
 	args = append([]string{"-t", string(ruleInfo.Table.Name), string(ruleInfo.Action), string(ruleInfo.Chain)}, args...)
 	return ipt.raw(args...)
+}
+
+func (ipt IPTable) ValidateAndRun(ruleInfo *RuleInfo) error {
+	existsFlag, _ := ipt.RuleExists(ruleInfo)
+	if existsFlag == true {
+		return ErrRuleInfoChainExist
+	}
+	out, err := ipt.Raw(ruleInfo)
+	if err != nil {
+		fmt.Println(err)
+		return RuleError{
+			Output: out,
+		}
+	}
+	return nil
 }
 
 //--- CRUD ---
@@ -198,7 +221,6 @@ func (ipt IPTable) IptablesSave(tableInfo *TableInfo, chain Chain) (out []byte, 
 		Chain:  chain,
 		Action: Save,
 	}
-	r.DefaultTable()
 	return ipt.Raw(r)
 }
 
@@ -214,10 +236,6 @@ func (ipt IPTable) RuleExists(ruleInfo *RuleInfo) (bool, error) {
 	existingRules, _ := ipt.IptablesSave(ruleInfo.Table, ruleInfo.Chain)
 
 	return strings.Contains(string(existingRules), ruleString), nil
-}
-
-func (ipt IPTable) ProgramRule(ruleInfo RuleInfo) {
-
 }
 
 // default in filter table
@@ -248,7 +266,69 @@ func (ipt IPTable) ForwardPolicySet(target Target) error {
 	return ipt.policySet(Forward, target)
 }
 
-func (ipt IPTable) Accept() {
+//TODO App: Packet filtering
+// match ip / tcp
+// input/output? * accept/block? * tcp/udp? * ip/mask? * sport/dport? = ? rules
+
+func parseIpAddress(s string) (*net.IPNet, error) {
+	if strings.Contains(s, "/") == false {
+		s = fmt.Sprintf("%s/32", s)
+	}
+	_, ipnet, err := net.ParseCIDR(s)
+	if err != nil {
+		return nil, err
+	}
+	return ipnet, nil
+}
+
+func (ipt IPTable) InboundIp(source string, target Target) error {
+	legalFlag := targetExistInTable(&FilterTable, target)
+	if legalFlag != true {
+		return ErrIptablesNotMatch
+	}
+	s, err := parseIpAddress(source)
+	if err != nil {
+		return err
+	}
+	r := &RuleInfo{
+		Table:  &FilterTable,
+		Chain:  Input,
+		Action: Append,
+		Args:   []string{"-s", string(s.Mask), "-j", string(Accept)},
+	}
+	return ipt.ValidateAndRun(r)
+}
+
+func (ipt IPTable) OutboundIp(destination string, target Target) error {
+	legalFlag := targetExistInTable(&FilterTable, target)
+	if legalFlag != true {
+		return ErrIptablesNotMatch
+	}
+	d, err := parseIpAddress(destination)
+	if err != nil {
+		return err
+	}
+	r := &RuleInfo{
+		Table:  &FilterTable,
+		Chain:  Output,
+		Action: Append,
+		Args:   []string{"-d", string(d.Mask), "-j", string(Accept)},
+	}
+	return ipt.ValidateAndRun(r)
+}
+
+func (ipt IPTable) PortPermit(port int, target Target) error {
+	legalFlag := targetExistInTable(&FilterTable, target)
+	if legalFlag != true {
+		return ErrIptablesNotMatch
+	}
+	r := &RuleInfo{
+		Table:  &FilterTable,
+		Chain:  Input,
+		Action: Append,
+		Args:   []string{"-p", "tcp", "-dport", strconv.Itoa(port), "-j", string(target)},
+	}
+	return ipt.ValidateAndRun(r)
 }
 
 func (ipt IPTable) Drop()    {}
@@ -258,7 +338,7 @@ func (ipt IPTable) PreRouting()  {}
 func (ipt IPTable) PostRouting() {}
 
 //--- Application ---
-//TODO Packet filtering
+
 //TODO  Accounting
 //TODO  Connection tracking
 //TODO  Packet mangling

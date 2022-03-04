@@ -67,3 +67,8 @@ func TestPolicySet(t *testing.T) {
 		t.Fatal("iptables policy setting does not work")
 	}
 }
+
+// TODO
+func TestInboundIp()
+func TestOutboundIp()
+func TestPortPermit()
