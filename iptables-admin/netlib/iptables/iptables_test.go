@@ -69,6 +69,38 @@ func TestPolicySet(t *testing.T) {
 }
 
 // TODO
-func TestInboundIp()
-func TestOutboundIp()
-func TestPortPermit()
+func TestInboundIp(t *testing.T) {
+	ipt := IPTable{}
+	source1 := "192.168.254.254"
+	ipt.InboundIp(Append, source1, Drop)
+	defer func() {
+		ipt.InboundIp(Delete, source1, Drop)
+	}()
+
+	r := &RuleInfo{
+		Chain: Input,
+		Args:  []string{"-s", source1 + "/32", "-j", string(Drop)},
+	}
+	existFlag, err := ipt.RuleExists(r)
+	if existFlag == false || err != nil {
+		t.Fatal("Inbound Ip does not work")
+	}
+
+	source2 := "192.168.253.0/24"
+	ipt.InboundIp(Append, source2, Drop)
+	defer func() {
+		ipt.InboundIp(Delete, source2, Drop)
+	}()
+	r = &RuleInfo{
+		Chain: Input,
+		Args:  []string{"-s", source2, "-j", string(Drop)},
+	}
+	existFlag, err = ipt.RuleExists(r)
+	if existFlag == false || err != nil {
+		t.Fatal("Inbound ipnet does not work")
+	}
+
+}
+
+func TestOutboundIp(t *testing.T) {}
+func TestPortPermit(t *testing.T) {}

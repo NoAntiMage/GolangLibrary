@@ -94,8 +94,20 @@ var (
 	ErrIptablesNotMatch      = errors.New("No chain/target/match by that name")
 	ErrRuleInfoChainNotFound = errors.New("Chain is required in the rule")
 	ErrRuleInfoChainExist    = errors.New("rule to append has exist")
+	ErrRuleInfoWrongAction   = errors.New("illegal action in rule")
 	initOnce                 sync.Once
 )
+
+//util module
+//to be imgrated
+func sliceContainString(items []string, item string) bool {
+	for _, eachItem := range items {
+		if eachItem == item {
+			return true
+		}
+	}
+	return false
+}
 
 func init() {
 	initCheck()
@@ -172,9 +184,12 @@ func (ipt IPTable) Raw(ruleInfo *RuleInfo) ([]byte, error) {
 }
 
 func (ipt IPTable) ValidateAndRun(ruleInfo *RuleInfo) error {
-	existsFlag, _ := ipt.RuleExists(ruleInfo)
-	if existsFlag == true {
-		return ErrRuleInfoChainExist
+	validatableAction := []string{string(Append), string(Insert)}
+	if sliceContainString(validatableAction, string(ruleInfo.Action)) {
+		existsFlag, _ := ipt.RuleExists(ruleInfo)
+		if existsFlag == true {
+			return ErrRuleInfoChainExist
+		}
 	}
 	out, err := ipt.Raw(ruleInfo)
 	if err != nil {
@@ -270,18 +285,23 @@ func (ipt IPTable) ForwardPolicySet(target Target) error {
 // match ip / tcp
 // input/output? * accept/block? * tcp/udp? * ip/mask? * sport/dport? = ? rules
 
-func parseIpAddress(s string) (*net.IPNet, error) {
+func parseIpAddress(s string) (string, error) {
 	if strings.Contains(s, "/") == false {
 		s = fmt.Sprintf("%s/32", s)
 	}
 	_, ipnet, err := net.ParseCIDR(s)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return ipnet, nil
+	return ipnet.String(), nil
 }
 
-func (ipt IPTable) InboundIp(source string, target Target) error {
+func (ipt IPTable) InboundIp(action Action, source string, target Target) error {
+	legalAction := []string{string(Append), string(Insert), string(Delete)}
+	existFlag := sliceContainString(legalAction, string(action))
+	if existFlag == false {
+		return ErrRuleInfoWrongAction
+	}
 	legalFlag := targetExistInTable(&FilterTable, target)
 	if legalFlag != true {
 		return ErrIptablesNotMatch
@@ -293,15 +313,23 @@ func (ipt IPTable) InboundIp(source string, target Target) error {
 	r := &RuleInfo{
 		Table:  &FilterTable,
 		Chain:  Input,
-		Action: Append,
-		Args:   []string{"-s", string(s.Mask), "-j", string(Accept)},
+		Action: action,
+		Args:   []string{"-s", s, "-j", string(target)},
 	}
+	//	fmt.Printf("going to VandRun: %v\n", r)
 	return ipt.ValidateAndRun(r)
 }
 
-func (ipt IPTable) OutboundIp(destination string, target Target) error {
+//todo
+func (ipt IPTable) OutboundIp(action Action, destination string, target Target) error {
+	legalAction := []string{string(Append), string(Insert), string(Drop)}
+	existFlag := sliceContainString(legalAction, string(action))
+	if existFlag == false {
+		return ErrRuleInfoWrongAction
+	}
+
 	legalFlag := targetExistInTable(&FilterTable, target)
-	if legalFlag != true {
+	if legalFlag == false {
 		return ErrIptablesNotMatch
 	}
 	d, err := parseIpAddress(destination)
@@ -311,8 +339,8 @@ func (ipt IPTable) OutboundIp(destination string, target Target) error {
 	r := &RuleInfo{
 		Table:  &FilterTable,
 		Chain:  Output,
-		Action: Append,
-		Args:   []string{"-d", string(d.Mask), "-j", string(Accept)},
+		Action: action,
+		Args:   []string{"-d", string(d), "-j", string(Accept)},
 	}
 	return ipt.ValidateAndRun(r)
 }
