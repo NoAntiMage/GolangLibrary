@@ -2,6 +2,7 @@ package iptables
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -31,7 +32,6 @@ func TestIptableSave(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func TestPolicySet(t *testing.T) {
@@ -68,11 +68,13 @@ func TestPolicySet(t *testing.T) {
 	}
 }
 
-// TODO
 func TestInboundIp(t *testing.T) {
 	ipt := IPTable{}
 	source1 := "192.168.254.254"
-	ipt.InboundIp(Append, source1, Drop)
+	err := ipt.InboundIp(Append, source1, Drop)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer func() {
 		ipt.InboundIp(Delete, source1, Drop)
 	}()
@@ -87,7 +89,10 @@ func TestInboundIp(t *testing.T) {
 	}
 
 	source2 := "192.168.253.0/24"
-	ipt.InboundIp(Append, source2, Drop)
+	err = ipt.InboundIp(Append, source2, Drop)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer func() {
 		ipt.InboundIp(Delete, source2, Drop)
 	}()
@@ -103,4 +108,23 @@ func TestInboundIp(t *testing.T) {
 }
 
 func TestOutboundIp(t *testing.T) {}
-func TestPortPermit(t *testing.T) {}
+
+func TestPortPermit(t *testing.T) {
+	ipt := IPTable{}
+	targetPort := 30000
+	ipt.PortPermit(Append, targetPort, Drop)
+	defer func() {
+		ipt.PortPermit(Delete, targetPort, Drop)
+	}()
+
+	r := &RuleInfo{
+		Table:  &FilterTable,
+		Chain:  Input,
+		Action: Append,
+		Args:   []string{"-p", "tcp", "-m", "tcp", "--dport", strconv.Itoa(targetPort), "-j", string(Drop)},
+	}
+	existFlag, err := ipt.RuleExists(r)
+	if existFlag == false || err != nil {
+		t.Fatal("PortPermit does not work")
+	}
+}
