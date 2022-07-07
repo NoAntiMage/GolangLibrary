@@ -1,7 +1,9 @@
 package main
 
 import (
+	"io"
 	"os"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,12 +27,17 @@ func main() {
 	// logger output type
 	var log = logrus.New()
 	file, err := os.OpenFile("access.log", os.O_CREATE|os.O_WRONLY, 0666)
+	// mutiOutput writers
+	writers := []io.Writer{
+		file,
+		os.Stdout}
+	fileAndStdoutWriter := io.MultiWriter(writers...)
 	if err == nil {
-		log.Out = file
+		log.SetOutput(fileAndStdoutWriter)
 	} else {
 		log.Info("Failed to log to file, using default stderr")
 	}
 	log.WithFields(logrus.Fields{
 		"filename": "access",
-	}).Info("open file failed")
+	}).Info("mutiOutput")
 }
