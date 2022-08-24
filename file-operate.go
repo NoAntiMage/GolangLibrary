@@ -54,7 +54,7 @@ func WriteFileAppend(src string, content []byte) error {
 	return WriteFile(src, newContent)
 }
 
-func CutFile(str string, newSrc string) error {
+func CutFile(src string, newSrc string) error {
 	return os.Rename(src, newSrc)
 }
 
@@ -80,7 +80,7 @@ func DeleteFile(src string) error {
 	return os.RemoveAll(src)
 }
 
-func IsExist(str string) bool {
+func IsExist(src string) bool {
 	_, err := os.Stat(src)
 	return err == nil || os.IsExist(err)
 }
@@ -90,7 +90,7 @@ func IsFile(src string) bool {
 	return err == nil && !info.IsDir()
 }
 
-func IsFolder(str string) bool {
+func IsFolder(src string) bool {
 	info, err := os.Stat(src)
 	return err == nil && info.IsDir()
 }
@@ -137,7 +137,7 @@ func GetFileList(src string, filter string, isSrc bool) ([]string, error) {
 	return fs, nil
 }
 
-func getFileListCount(str string) (int, error) {
+func getFileListCount(src string) (int, error) {
 	dir, err := ioutil.ReadDir(src)
 	if err != nil {
 		return 0, err
