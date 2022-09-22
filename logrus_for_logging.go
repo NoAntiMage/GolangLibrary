@@ -3,6 +3,8 @@ package main
 import (
 	"io"
 	"os"
+	"path"
+	"runtime"
 
 	"github.com/sirupsen/logrus"
 )
@@ -17,7 +19,6 @@ func main() {
 	logrus.Panic("Panic")
 
 	// logger configuration
-	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logrus.SetOutput(os.Stdout)
 	logrus.SetLevel(logrus.InfoLevel)
 	logrus.WithFields(logrus.Fields{
@@ -26,6 +27,14 @@ func main() {
 
 	// logger output type
 	var log = logrus.New()
+	// logging runtime tracing
+	log.SetReportCaller(true)
+	log.SetFormatter(&logrus.TextFormatter{
+		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
+			fileName := path.Base(frame.File)
+			return frame.Function, fileName
+		},
+	})
 	file, err := os.OpenFile("access.log", os.O_CREATE|os.O_WRONLY, 0666)
 	// mutiOutput writers
 	writers := []io.Writer{
